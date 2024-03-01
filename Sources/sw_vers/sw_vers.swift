@@ -1,41 +1,36 @@
 import Foundation
 
-/// Just a fun experiment to reimplement macOS' `sw_vers` binary in Swift
-/// The original is written in C, and is here: https://opensource.apple.com/source/DarwinTools/DarwinTools-1/sw_vers.c.auto.html
-
-@main
-final class sw_vers {
-	static func main() throws {
+enum sw_vers {
+	static func run(
+		arguments: [String] = ProcessInfo.processInfo.arguments
+	) throws -> String {
 		let usage = "Usage: sw_vers [--help|--productName|--productVersion|--productVersionExtra|--buildVersion]"
 
-		let arguments = sw_versArgument.process(ProcessInfo.processInfo.arguments)
+		let arguments = sw_versArgument.process(arguments)
 
 		let systemVersion = try SystemVersion()
 
 		guard arguments.isEmpty == false else {
 			let output = """
-				ProductName:    \(systemVersion.productName)
-				ProductVersion: \(systemVersion.productVersion)
-				BuildVersion:   \(systemVersion.productBuildVersion)
-				"""
-			print(output)
-			return
+			ProductName:		\(systemVersion.productName)
+			ProductVersion:		\(systemVersion.productVersion)
+			BuildVersion:		\(systemVersion.productBuildVersion)
+			"""
+			return output
 		}
 
 		switch arguments {
 			case _ where arguments.contains(.productName):
-				print(systemVersion.productName)
-				return
+				return systemVersion.productName
 			case _ where arguments.contains(.productVersion):
-				print(systemVersion.productVersion)
-				return
+				return systemVersion.productVersion
 			case _ where arguments.contains(.productVersionExtra):
-				// do nothing
-				print()
+				// TODO: Figure out how to handle `productVersionExtra`
+				return ""
 			case _ where arguments.contains(.buildVersion):
-				print(systemVersion.productBuildVersion)
+				return systemVersion.productBuildVersion
 			default:
-				print(usage)
+				return usage
 		}
 	}
 
@@ -48,7 +43,8 @@ final class sw_vers {
 
 		init?(rawValue: String) {
 			for argument in sw_versArgument.allCases {
-				if rawValue.localizedLowercase.contains(argument.rawValue.localizedLowercase) {
+				let trimmedRawValue = rawValue.replacingOccurrences(of: "-", with: "")
+				if trimmedRawValue.localizedLowercase == argument.rawValue.localizedLowercase {
 					self = argument
 					return
 				}
@@ -59,57 +55,5 @@ final class sw_vers {
 		static func process(_ arguments: [String]) -> [sw_versArgument] {
 			arguments.compactMap { sw_versArgument(rawValue: $0) }
 		}
-	}
-}
-
-private struct SystemVersion {
-	let buildID: String
-	let productBuildVersion: String
-	let productCopyright: String
-	let productName: String
-	let productUserVisibleVersion: String
-	let productVersion: String
-	let iOSSupportVersion: String
-
-	init(
-		buildID: String,
-		productBuildVersion: String,
-		productCopyright: String,
-		productName: String,
-		productUserVisibleVersion: String,
-		productVersion: String,
-		iOSSupportVersion: String
-	) {
-		self.buildID = buildID
-		self.productBuildVersion = productBuildVersion
-		self.productCopyright = productCopyright
-		self.productName = productName
-		self.productUserVisibleVersion = productUserVisibleVersion
-		self.productVersion = productVersion
-		self.iOSSupportVersion = iOSSupportVersion
-	}
-}
-
-extension SystemVersion: Decodable {
-	enum CodingKeys: String, CodingKey {
-		case buildID = "BuildID"
-		case productBuildVersion = "ProductBuildVersion"
-		case productCopyright = "ProductCopyright"
-		case productName = "ProductName"
-		case productUserVisibleVersion = "ProductUserVisibleVersion"
-		case productVersion = "ProductVersion"
-		case iOSSupportVersion = "iOSSupportVersion"
-	}
-
-	init() throws {
-		let plistPath = "/System/Library/CoreServices/SystemVersion.plist"
-		let plistURL: URL
-		if #available(macOS 13.0, *) {
-			plistURL = URL(filePath: plistPath)
-		} else {
-			plistURL = URL(fileURLWithPath: plistPath)
-		}
-		let plistData = try Data(contentsOf: plistURL)
-		self = try PropertyListDecoder().decode(SystemVersion.self, from: plistData)
 	}
 }

@@ -15,8 +15,14 @@ let package = Package(
 		.executableTarget(
 			name: "sw_vers"
 		),
+
+		// I wanted to name this target `sw_versTests` to conform to the pattern,
+		// but Xcode throws a weird warning saying the underscore is invalid:
+		//
+		// > Process empty-sw_versTests.plist
+		// > invalid character in Bundle Identifier. This string must be a uniform type identifier (UTI) that contains only alphanumeric (A-Z,a-z,0-9), hyphen (-), and period (.) characters.
 		.testTarget(
-			name: "sw_versTests",
+			name: "swVersTests",
 			dependencies: ["sw_vers"]
 		),
 	]
